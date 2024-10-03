@@ -64,10 +64,19 @@ YAC is a script designed to perform login checks for multiple websites using a l
    ```
 
 ## Usage
+Run the script with the following arguments:
 
+-c or --config to print the websites in the config file.
+-s or --single followed by the website number to perform a single check.
+-m or --multiple followed by the website numbers separated by comma or space to perform multiple checks.
+
+Example usage:
 1. Run the script:
    ```bash
-   python main.py
+   python main.py -c
+   python main.py -s 1
+   python main.py -m 1,2,3
+   python main.py -m 1 2 3
    ```
 
 2. You will be prompted to choose between performing single or multiple checks. Follow the on-screen instructions.
