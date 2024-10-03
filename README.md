@@ -21,17 +21,17 @@ YAC is a script designed to perform login checks for multiple websites using a l
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/repo-name.git
+   git clone https://github.com/hithmast/YAC.git
    ```
    
 2. Change to the project directory:
    ```bash
-   cd repo-name
+   cd YAC
    ```
 
 3. Ensure you have the required libraries installed. You can install them using pip:
    ```bash
-   pip install requests
+   pip install -r requirments.txt
    ```
 
 ## Configuration
@@ -67,7 +67,7 @@ YAC is a script designed to perform login checks for multiple websites using a l
 
 1. Run the script:
    ```bash
-   python script_name.py
+   python main.py
    ```
 
 2. You will be prompted to choose between performing single or multiple checks. Follow the on-screen instructions.
