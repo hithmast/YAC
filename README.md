@@ -31,7 +31,7 @@ YAC is a script designed to perform login checks for multiple websites using a l
 
 3. Ensure you have the required libraries installed. You can install them using pip:
    ```bash
-   pip install -r requirments.txt
+   pip install requests
    ```
 
 ## Configuration
