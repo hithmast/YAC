@@ -1,20 +1,18 @@
 import time
 import csv
 import requests
-from utils import parser
+from utils import vparser
 import logging
 import os
+import argparse
 from datetime import datetime
 from urllib.parse import unquote
 
-
-#Globals
+# Globals
 running = True
-results = []  
-
+results = []
 
 def reverse_url_encoding(encoded_url):
-    
     decoded_url = unquote(encoded_url)
     return decoded_url
 
@@ -28,20 +26,18 @@ def setup_logging(log_file):
 
 def perform_login(username, password, website_info, success_indicators, failure_indicators):
     try:
-        
         if not running:
             return False, "Paused"
-        
-        
+
         payload = {'username': username, 'password': password}
         payload.update(website_info['payload'])
-        
-        headers = website_info['headers']  
+
+        headers = website_info['headers']
         response = requests.post(reverse_url_encoding(website_info['website']['login_url']), data=payload, headers=headers)
-        
+
         if response.status_code == 302:
             logging.info("Received a 302 redirection response.")
-            
+
             for indicator in success_indicators:
                 if indicator in response.text:
                     logging.info(f"Login successful for username: {username}")
@@ -52,9 +48,8 @@ def perform_login(username, password, website_info, success_indicators, failure_
                     return False, indicator
             logging.error(f"Login failed for username: {username}. Reason: {response.status_code}")
             return False, "Unknown"
-        
+
         elif response.status_code == 200:
-            
             for indicator in success_indicators:
                 if indicator in response.text:
                     logging.info(f"Login successful for username: {username}")
@@ -65,11 +60,11 @@ def perform_login(username, password, website_info, success_indicators, failure_
                     return False, indicator
             logging.error(f"Login failed for username: {username}. Reason: Unknown")
             return False, "Unknown"
-        
+
         else:
             logging.error(f"Login request failed with status code: {response.status_code}")
             return False, f"Status Code {response.status_code}"
-            
+
     except Exception as e:
         logging.error(f"Exception occurred during login for username: {username}: {str(e)}")
         return False, "Exception occurred"
@@ -85,35 +80,21 @@ def save_results(results, filename):
     else:
         logging.info("No results to save.")
 
-
-def single_check(websites):
-    print("Choose a website to perform a single check:")
+def print_websites(websites):
     for i, (website_name, _) in enumerate(websites.items(), start=1):
         print(f"{i}. {website_name}")
 
-    try:
-        choice = int(input("Enter the number of the website: "))
-        website_name, website_info = list(websites.items())[choice - 1]
+def single_check(websites, website_number):
+    website_name, website_info = list(websites.items())[website_number - 1]
+    perform_check(website_name, website_info)
+
+def multiple_check(websites, website_numbers):
+    for website_number in website_numbers:
+        website_name, website_info = list(websites.items())[website_number - 1]
         perform_check(website_name, website_info)
-    except (IndexError, ValueError):
-        logging.error("Invalid choice. Please enter a valid number.")
-
-def multiple_check(websites):
-    print("Choose multiple websites to perform checks (enter numbers separated by comma):")
-    for i, (website_name, _) in enumerate(websites.items(), start=1):
-        print(f"{i}. {website_name}")
-
-    try:
-        choices = input("Enter the numbers of the websites: ")
-        choices = [int(choice.strip()) for choice in choices.split(',')]
-        for choice in choices:
-            website_name, website_info = list(websites.items())[choice - 1]
-            perform_check(website_name, website_info)
-    except (IndexError, ValueError):
-        logging.error("Invalid choices. Please enter valid numbers separated by commas.")
 
 def perform_check(website_name, website_info):
-    global results  
+    global results
     credentials_file = website_info['website']['credentials_file']
     output_file = website_info['website']['output_file']
     success_indicators = website_info['website']['success_indicators']
@@ -121,11 +102,9 @@ def perform_check(website_name, website_info):
 
     logging.info(f"Processing website: {website_name}")
 
-    
     valid_logins = 0
     start_time = time.time()
 
-    
     try:
         with open(credentials_file, 'r') as file:
             csv_reader = csv.DictReader(file)
@@ -143,20 +122,18 @@ def perform_check(website_name, website_info):
 
     end_time = time.time()
 
-    
     execution_time = end_time - start_time
 
-    
     try:
         with open(output_file, 'w', newline='') as csvfile:
-            fieldnames = ['Username', 'Password', 'Valid Login', 'Reason']  
+            fieldnames = ['Username', 'Password', 'Valid Login', 'Reason']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             writer.writeheader()
-            writer.writerows(results)  
-            writer.writerow({'Username': "Execution time: %.2f seconds" % execution_time, 'Password': ''}) 
-            writer.writerow({'Username': "Total users: %d" % (len(results)), 'Password': ''}) 
-            writer.writerow({'Username': "Valid logins: %d" % valid_logins, 'Password': ''}) 
+            writer.writerows(results)
+            writer.writerow({'Username': "Execution time: %.2f seconds" % execution_time, 'Password': ''})
+            writer.writerow({'Username': "Total users: %d" % (len(results)), 'Password': ''})
+            writer.writerow({'Username': "Valid logins: %d" % valid_logins, 'Password': ''})
     except PermissionError:
         logging.error(f"No permission to write to '{output_file}'.")
 
@@ -164,26 +141,26 @@ def perform_check(website_name, website_info):
     logging.info("Total users: %d", len(results))
     logging.info("Valid logins: %d", valid_logins)
 
-#main Funcitons
 def main():
-    
+    parser = argparse.ArgumentParser(description='Login checker')
+    parser.add_argument('-c', '--config', action='store_true', help='Print websites in config file')
+    parser.add_argument('-s', '--single', type=int, help='Perform single check on website number')
+    parser.add_argument('-m', '--multiple', type=lambda s: [int(i) for i in s.split(',')], help='Perform multiple checks on website numbers (separated by comma or space)')
+    args = parser.parse_args()
+
     log_file = "output.log"
     setup_logging(log_file)
 
-    
-    websites = parser.read_website_config('config/websites_config.ini')
+    websites = vparser.read_website_config('config/websites_config.ini')
 
-    
-    while True:
-        check_type = input("Do you want to perform single or multiple checks? (single/multiple): ").lower()
-        if check_type == 'single':
-            single_check(websites)
-            break
-        elif check_type == 'multiple':
-            multiple_check(websites)
-            break
-        else:
-            print("Invalid input. Please enter 'single' or 'multiple'.")
+    if args.config:
+        print_websites(websites)
+    elif args.single:
+        single_check(websites, args.single)
+    elif args.multiple:
+        multiple_check(websites, args.multiple)
+    else:
+        print("Invalid arguments. Please use -c, -s or -m.")
 
 if __name__ == "__main__":
     try:
@@ -192,7 +169,7 @@ if __name__ == "__main__":
         logging.info("KeyboardInterrupt detected. Would you like to save results? (yes/no): ")
         user_input = input().strip().lower()
         if user_input in ['yes', 'y']:
-            save_results(results, "results.csv")  
+            save_results(results, "results.csv")
             logging.info("Results saved. Exiting program.")
         else:
             logging.info("Results not saved. Exiting program.")
