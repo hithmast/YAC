@@ -1,89 +1,97 @@
-# YAC (Yes Another Checker)
+# YAC: Yet Another Checker - main.py
 
-YAC is a script designed to perform login checks for multiple websites using a list of credentials. It supports both single and multiple website checks and logs the results, including successful and failed login attempts.
+## Overview
+
+The `yac` module of YAC (Yet Another Checker) is a command-line tool for checking the validity of login credentials across multiple websites. It supports customizable website configurations and logging capabilities, making it an efficient solution for automated credential validation.
 
 ## Features
 
-- **Single and Multiple Checks**: Users can choose to perform login checks on a single website or multiple websites at once.
-- **CSV Input/Output**: The script reads credentials from a CSV file and outputs the results, including the status of each login attempt.
-- **Logging**: All actions and results are logged in a log file for later review.
-- **URL Decoding**: Handles URL decoding for login URLs to ensure proper requests are made.
+- Perform single or multiple login checks on specified websites.
+- Support for custom payloads and headers for each website.
+- Logging of results with timestamps, including successful and failed login attempts.
+- Save results to a CSV file.
+- Command-line interface with argparse for ease of use.
 
-## Requirements
+## Prerequisites
 
-- Python 3.x
-- `requests` library
-- `csv` module (built-in)
-- `logging` module (built-in)
-- A custom `parser` module for reading website configurations.
+- Python 3.6 or higher
+- Required Python packages:
+  - `requests`
+  - `argparse`
+  - Any other dependencies as specified in the `setup.py` file
 
 ## Installation
 
-1. Clone this repository:
-   ```bash
-   git clone -b main-line-args https://github.com/hithmast/YAC.git
-   ```
-   
-2. Change to the project directory:
-   ```bash
-   cd YAC
-   ```
+Clone the repository and install the package:
 
-3. Ensure you have the required libraries installed. You can install them using pip:
-   ```bash
-   pip install requests
-   ```
+```bash
+git clone https://github.com/hithmast/YAC.git
+cd YAC
+python setup.py install
+```
 
-## Configuration
-
-1. Create a configuration file named `websites_config.ini` in the `config` directory. The file should include:
-   - `credentials_file`: Path to the CSV file containing usernames and passwords.
-   - `output_file`: Path to the output CSV file where results will be saved.
-   - `login_url`: The URL for the login form (will be URL-encoded).
-   - Any extra headers should start with `h_`, and any extra payload fields should start with `p_`.
-   - `success_indicators`: Indicators to identify a successful login.
-   - `failure_indicators`: Indicators to identify a failed login.
-
-   Example structure of `websites_config.ini`:
-   ```ini
-   [WebsiteName]
-   credentials_file = path/to/credentials.csv
-   output_file = path/to/results.csv
-   login_url = https://example.com/login
-   h_User-Agent = Mozilla/5.0
-   p_extra_field = extra_value
-   success_indicators = login successful, welcome
-   failure_indicators = invalid username, invalid password
-   ```
-
-2. Prepare a CSV file for credentials (`credentials.csv`):
-   ```csv
-   Username,Password
-   user1,password1
-   user2,password2
-   ```
+Ensure that you have the necessary configuration file located at `~/.yac/config/websites_config.ini`. The script will utilize this file to perform login checks.
 
 ## Usage
-Run the script with the following arguments:
-   -c or --config to print the websites in the config file.
-   -s or --single followed by the website number to perform a single check.
-   -m or --multiple followed by the website numbers separated by comma or space to perform multiple checks.
-Example usage
-   ```bash
-   python main.py -c
-   python main.py -s 1
-   python main.py -m 1,2,3
-   python main.py -m 1 2 3
-   ```
+
+### Command-Line Interface
+
+The script can be run from the command line with various options:
+
+```bash
+yac [options]
+```
+
+### Options
+
+- `-c`, `--config`: Print a list of websites in the config file.
+- `-s`, `--single`: Perform a single check on the specified website number.
+- `-m`, `--multiple`: Perform multiple checks on specified website numbers (comma-separated).
+- `-C`, `--combo`: Path to a credentials file for a single check.
+- `-o`, `--output`: Specify the output file for the results of a single check.
+
+### Examples
+
+#### Print Configured Websites
+
+```bash
+yac -c
+```
+
+#### Perform a Single Check
+
+```bash
+yac -s 1 -C credentials.csv -o output.csv
+```
+
+#### Perform Multiple Checks
+
+```bash
+python main.py -m 1,2,3
+```
 
 ## Logging
 
-Logs will be generated daily in the `logs` directory. The log file will contain details about login attempts, including successes and failures.
+The script generates a log file `output.log` in a `logs` directory, creating a subdirectory based on the current date. This log file contains detailed information about the execution, including successful and failed login attempts.
+
+## Saving Results
+
+Upon termination (either by completing the checks or by pressing `Ctrl+C`), the user will be prompted to save the results to a file named `results.csv`.
+
+## Configuration
+
+The website configurations should be defined in the `~/.yac/config/websites_config.ini` file. The configuration file should specify the login URLs, success and failure indicators, payloads, and headers for each website.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request if you have suggestions or improvements.
+Contributions are welcome! Please fork the repository, make your changes, and submit a pull request. Ensure that your code follows the project’s coding standards and includes relevant tests.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Author
+
+**Ali Emara**  
+[ali.emara175@gmail.com](mailto:ali.emara175@gmail.com)  
+[GitHub](https://github.com/hithmast)

@@ -1,7 +1,7 @@
 import time
 import csv
 import requests
-from utils import vparser
+from yac.utils import vparser
 import logging
 import os
 import argparse
@@ -80,23 +80,32 @@ def save_results(results, filename):
     else:
         logging.info("No results to save.")
 
+# Function to locate config file in multiple locations
+def load_config():
+    config_path = os.path.expanduser('~/.yac/config/websites_config.ini')
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found at {config_path}")
+    
+    # Use vparser to read the config file
+    return vparser.read_website_config(config_path)
+
 def print_websites(websites):
     for i, (website_name, _) in enumerate(websites.items(), start=1):
         print(f"{i}. {website_name}")
 
-def single_check(websites, website_number):
+def single_check(websites, website_number, credentials_file, output_file=None):
     website_name, website_info = list(websites.items())[website_number - 1]
-    perform_check(website_name, website_info)
+    perform_check(website_name, website_info, credentials_file, output_file)
 
 def multiple_check(websites, website_numbers):
     for website_number in website_numbers:
         website_name, website_info = list(websites.items())[website_number - 1]
         perform_check(website_name, website_info)
 
-def perform_check(website_name, website_info):
+def perform_check(website_name, website_info, credentials_file=None, output_file=None):
     global results
-    credentials_file = website_info['website']['credentials_file']
-    output_file = website_info['website']['output_file']
+    # Use the provided output file or fallback to the config file output path
+    output_file = output_file if output_file else website_info['website']['output_file']
     success_indicators = website_info['website']['success_indicators']
     failure_indicators = website_info['website']['failure_indicators']
 
@@ -105,20 +114,38 @@ def perform_check(website_name, website_info):
     valid_logins = 0
     start_time = time.time()
 
-    try:
-        with open(credentials_file, 'r') as file:
-            csv_reader = csv.DictReader(file)
-            for row in csv_reader:
-                username = row['Username']
-                password = row['Password']
-                login_status, reason = perform_login(username, password, website_info, success_indicators, failure_indicators)
-                results.append({'Username': username, 'Password': password,
-                                 'Valid Login': 'Yes' if login_status else 'No',
-                                 'Reason': reason})
-                if login_status:
-                    valid_logins += 1
-    except FileNotFoundError:
-        logging.error(f"File '{credentials_file}' not found.")
+    # Use the provided credentials file if specified
+    if credentials_file:
+        try:
+            with open(credentials_file, 'r') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    username = row['Username']
+                    password = row['Password']
+                    login_status, reason = perform_login(username, password, website_info, success_indicators, failure_indicators)
+                    results.append({'Username': username, 'Password': password,
+                                     'Valid Login': 'Yes' if login_status else 'No',
+                                     'Reason': reason})
+                    if login_status:
+                        valid_logins += 1
+        except FileNotFoundError:
+            logging.error(f"File '{credentials_file}' not found.")
+    else:
+        credentials_file = website_info['website']['credentials_file']
+        try:
+            with open(credentials_file, 'r') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    username = row['Username']
+                    password = row['Password']
+                    login_status, reason = perform_login(username, password, website_info, success_indicators, failure_indicators)
+                    results.append({'Username': username, 'Password': password,
+                                     'Valid Login': 'Yes' if login_status else 'No',
+                                     'Reason': reason})
+                    if login_status:
+                        valid_logins += 1
+        except FileNotFoundError:
+            logging.error(f"File '{credentials_file}' not found.")
 
     end_time = time.time()
 
@@ -141,22 +168,36 @@ def perform_check(website_name, website_info):
     logging.info("Total users: %d", len(results))
     logging.info("Valid logins: %d", valid_logins)
 
+def get_config_file():
+    home_dir = os.path.expanduser("~")
+    config_dir = os.path.join(home_dir, '.yac', 'config')
+    config_file = os.path.join(config_dir, 'websites_config.ini')
+    return config_file
+
 def main():
-    parser = argparse.ArgumentParser(description='Login checker')
+    config = load_config()
+    parser = argparse.ArgumentParser(description='YAC Login checker')
     parser.add_argument('-c', '--config', action='store_true', help='Print websites in config file')
     parser.add_argument('-s', '--single', type=int, help='Perform single check on website number')
     parser.add_argument('-m', '--multiple', type=lambda s: [int(i) for i in s.split(',')], help='Perform multiple checks on website numbers (separated by comma or space)')
+    parser.add_argument('-C', '--combo', type=str, help='Path to credentials file for single check')
+    parser.add_argument('-o', '--output', type=str, help='Specify output file for single check')
     args = parser.parse_args()
 
     log_file = "output.log"
     setup_logging(log_file)
 
-    websites = vparser.read_website_config('config/websites_config.ini')
+    config_file = get_config_file()
+    if not os.path.exists(config_file):
+        logging.error(f"Config file not found at {config_file}")
+        return
+
+    websites = vparser.read_website_config(config_file)
 
     if args.config:
         print_websites(websites)
     elif args.single:
-        single_check(websites, args.single)
+        single_check(websites, args.single, args.combo, args.output)
     elif args.multiple:
         multiple_check(websites, args.multiple)
     else:

@@ -1,0 +1,14 @@
+# Include all Python source files
+include *.py
+recursive-include yac *.py
+recursive-include yac/utils *.py
+recursive-include config *
+recursive-include results *
+recursive-include yac/logs *
+
+# Include README file
+include README.md
+
+# Exclude any unnecessary files
+exclude *.pyc
+exclude __pycache__/
