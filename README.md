@@ -25,9 +25,9 @@ The `yac` module of YAC (Yet Another Checker) is a command-line tool for checkin
 Clone the repository and install the package:
 
 ```bash
-git clone https://github.com/hithmast/YAC.git
+git clone -b package https://github.com/hithmast/YAC.git
 cd YAC
-python setup.py install
+sudo python setup.py install # or pip install . 
 ```
 
 Ensure that you have the necessary configuration file located at `~/.yac/config/websites_config.ini`. The script will utilize this file to perform login checks.
