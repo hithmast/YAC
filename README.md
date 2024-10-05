@@ -1,8 +1,8 @@
-# YAC: Yet Another Checker - main.py
+# YAC: Yes Another Checker - main.py
 
 ## Overview
 
-The `yac` module of YAC (Yet Another Checker) is a command-line tool for checking the validity of login credentials across multiple websites. It supports customizable website configurations and logging capabilities, making it an efficient solution for automated credential validation.
+The `yac` module of YAC (Yes Another Checker) is a command-line tool for checking the validity of login credentials across multiple websites. It supports customizable website configurations and logging capabilities, making it an efficient solution for automated credential validation.
 
 ## Features
 
