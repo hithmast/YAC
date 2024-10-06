@@ -19,9 +19,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-[project.dependencies]
-requests = "*"
-argparse = "*"
+dependencies = [
+    "requests",
+    "argparse"
+]
 
 [project.urls]
 Source = "https://github.com/hithmast/YAC"
