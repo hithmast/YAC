@@ -29,7 +29,10 @@ git clone -b package https://github.com/hithmast/YAC.git
 cd YAC
 sudo python setup.py install # or pip install . 
 ```
-
+Or
+```bash
+pip install yachecker
+```
 Ensure that you have the necessary configuration file located at `~/.yac/config/websites_config.ini`. The script will utilize this file to perform login checks.
 
 ## Usage
