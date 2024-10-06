@@ -1,85 +1,33 @@
-name: YAC Python Package CI
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
 
-on:
-  push:
-    branches:
-      - main
-      - package
-  pull_request:
-    branches:
-      - main
-      - package
+[project]
+name = "yachecker"
+version = "1.0.0"
+description = "YAC: Yes Another Checker"
+readme = "README.md"
+authors = [
+    { name = "Ali Emara", email = "ali.emara175@gmail.com" }
+]
+license = { text = "MIT" }
+homepage = "https://github.com/hithmast/YAC.git"
+keywords = ["login", "checker", "security", "automation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+# Change the dependencies section to be an array of strings
+dependencies = [
+    "requests",
+    "argparse"
+]
 
-    strategy:
-      matrix:
-        python-version: [3.9, 3.10, 3.11]
+[project.urls]
+Source = "https://github.com/hithmast/YAC"
+Documentation = "https://github.com/hithmast/YAC#readme"
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests argparse
-
-    - name: Run Tests
-      run: |
-        pytest --cov=yac
-
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-
-    - name: Install flake8 for linting
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8
-
-    - name: Run Linter
-      run: |
-        flake8 yac --count --max-complexity=10 --max-line-length=127 --statistics
-
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-
-    - name: Install build tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
-
-    - name: Build package
-      run: |
-        python -m build
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: YAC-dist
-        path: dist/
+[tool.setuptools.packages.find]
+where = ["yac"]
