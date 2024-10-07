@@ -7,6 +7,7 @@ import os
 import argparse
 from datetime import datetime
 from urllib.parse import unquote
+import urllib3
 
 # Globals
 running = True
@@ -24,50 +25,78 @@ def setup_logging(log_file):
                         handlers=[logging.FileHandler(os.path.join(log_dir, log_file)),
                                   logging.StreamHandler()])
 
-def perform_login(username, password, website_info, success_indicators, failure_indicators):
-    try:
-        if not running:
-            return False, "Paused"
+def perform_login(username, password, website_info, success_indicators, failure_indicators, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            if not running:
+                return False, "Paused"
 
-        payload = {'username': username, 'password': password}
-        payload.update(website_info['payload'])
+            payload = {'username': username, 'password': password}
+            payload.update(website_info['payload'])
 
-        headers = website_info['headers']
-        response = requests.post(reverse_url_encoding(website_info['website']['login_url']), data=payload, headers=headers)
+            headers = website_info['headers']
+            
+            # Set a timeout for the request
+            timeout = 30  # 30 seconds
+            
+            # Disable SSL verification warnings
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
+            response = requests.post(
+                reverse_url_encoding(website_info['website']['login_url']), 
+                data=payload, 
+                headers=headers, 
+                timeout=timeout,
+                verify=False  # Disable SSL verification
+            )
 
-        if response.status_code == 302:
-            logging.info("Received a 302 redirection response.")
+            if response.status_code == 302:
+                logging.info("Received a 302 redirection response.")
 
-            for indicator in success_indicators:
-                if indicator in response.text:
-                    logging.info(f"Login successful for username: {username}")
-                    return True, "Success"
-            for indicator in failure_indicators:
-                if indicator in response.text:
-                    logging.error(f"Login failed for username: {username}. Reason: {indicator}")
-                    return False, indicator
-            logging.error(f"Login failed for username: {username}. Reason: {response.status_code}")
-            return False, "Unknown"
+                for indicator in success_indicators:
+                    if indicator in response.text:
+                        logging.info(f"Login successful for username: {username}")
+                        return True, "Success"
+                for indicator in failure_indicators:
+                    if indicator in response.text:
+                        logging.error(f"Login failed for username: {username}. Reason: {indicator}")
+                        return False, indicator
+                logging.error(f"Login failed for username: {username}. Reason: {response.status_code}")
+                return False, "Unknown"
 
-        elif response.status_code == 200:
-            for indicator in success_indicators:
-                if indicator in response.text:
-                    logging.info(f"Login successful for username: {username}")
-                    return True, "Success"
-            for indicator in failure_indicators:
-                if indicator in response.text:
-                    logging.error(f"Login failed for username: {username}. Reason: {indicator}")
-                    return False, indicator
-            logging.error(f"Login failed for username: {username}. Reason: Unknown")
-            return False, "Unknown"
+            elif response.status_code == 200:
+                for indicator in success_indicators:
+                    if indicator in response.text:
+                        logging.info(f"Login successful for username: {username}")
+                        return True, "Success"
+                for indicator in failure_indicators:
+                    if indicator in response.text:
+                        logging.error(f"Login failed for username: {username}. Reason: {indicator}")
+                        return False, indicator
+                logging.error(f"Login failed for username: {username}. Reason: Unknown")
+                return False, "Unknown"
 
-        else:
-            logging.error(f"Login request failed with status code: {response.status_code}")
-            return False, f"Status Code {response.status_code}"
+            else:
+                logging.error(f"Login request failed with status code: {response.status_code}")
+                return False, f"Status Code {response.status_code}"
 
-    except Exception as e:
-        logging.error(f"Exception occurred during login for username: {username}: {str(e)}")
-        return False, "Exception occurred"
+        except requests.exceptions.Timeout:
+            logging.warning(f"Request timed out for username: {username}. Attempt {attempt + 1} of {max_retries}")
+            if attempt == max_retries - 1:
+                return False, "Request timed out"
+        except requests.exceptions.ConnectionError as e:
+            logging.warning(f"Connection error occurred for username: {username}: {str(e)}. Attempt {attempt + 1} of {max_retries}")
+            if attempt == max_retries - 1:
+                return False, "Connection error"
+        except Exception as e:
+            logging.warning(f"Exception occurred during login for username: {username}: {str(e)}. Attempt {attempt + 1} of {max_retries}")
+            if attempt == max_retries - 1:
+                return False, "Exception occurred"
+        
+        # Wait before retrying
+        time.sleep(2 ** attempt)  # Exponential backoff
+
+    return False, "Max retries reached"
 
 def save_results(results, filename):
     if results:
