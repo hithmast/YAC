@@ -15,8 +15,8 @@ def readme():
 
 setup(
     name='yac',                                # Package name
-    version='1.0.0',                           # Version of the package
-    description='YAC: Yet Another Checker',     # Short description
+    version='1.0.2',                           # Version of the package
+    description='YAC: Yes Another Checker',     # Short description
     long_description=readme(),                 # Long description from README.md
     long_description_content_type='text/markdown',
     author='Ali Emara',                        # Your name
