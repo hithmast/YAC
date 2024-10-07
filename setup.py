@@ -14,7 +14,7 @@ def readme():
         return f.read()
 
 setup(
-    name='yac',                                # Package name
+    name='yachecker',                                # Package name
     version='1.0.2',                           # Version of the package
     description='YAC: Yes Another Checker',     # Short description
     long_description=readme(),                 # Long description from README.md
@@ -26,6 +26,7 @@ setup(
     install_requires=[                         # Dependencies (from requirements.txt)
         'requests',
         'argparse',
+        'urllib3',
     ],
     include_package_data=True,                 # Include non-Python files like config.ini
     data_files=[                               # Install config file under ~/.yac/config
