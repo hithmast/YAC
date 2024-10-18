@@ -1,33 +1,60 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+name: Python Package CI
 
-[project]
-name = "yachecker"
-version = "1.0.0"
-description = "YAC Yes Another Checker"
-readme = "README.md"
-authors = [
-    { name = "Ali Emara", email = "ali.emara175@gmail.com" }
-]
-license = { text = "MIT" }
-homepage = "https://github.com/hithmast/YAC.git"
-keywords = ["login", "checker", "security", "automation"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-[project.dependencies]
-dependencies = [
-    "requests",
-    "argparse"
-]
+jobs:
+  build:
 
-[project.urls]
-Source = "https://github.com/hithmast/YAC"
-Documentation = "https://github.com/hithmast/YAC#readme"
+    runs-on: ubuntu-latest
 
-[tool.setuptools.packages.find]
-where = ["yac"]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        pip install pytest
+        pytest
+
+    - name: Build the package
+      run: python -m build
+
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 .
