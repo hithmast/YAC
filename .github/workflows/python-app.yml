@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "yachecker"
 version = "1.0.0"
-description = "YAC: Yes Another Checker"
+description = "YAC Yes Another Checker"
 readme = "README.md"
 authors = [
     { name = "Ali Emara", email = "ali.emara175@gmail.com" }
@@ -19,7 +19,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-# Change the dependencies section to be an array of strings
+[project.dependencies]
 dependencies = [
     "requests",
     "argparse"
