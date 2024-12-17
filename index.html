@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAC: Yes Another Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #77aaff 3px solid;
+        }
+        header a {
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 16px;
+        }
+        header ul {
+            padding: 0;
+            list-style: none;
+        }
+        header li {
+            display: inline;
+            padding: 0 20px 0 20px;
+        }
+        .main {
+            padding: 20px;
+            background: #fff;
+            margin-top: 20px;
+        }
+        pre {
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: "Courier New", Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>YAC: Yes Another Checker</h1>
+        </div>
+    </header>
+    <div class="container main">
+        <h2>Overview</h2>
+        <p>The <code>yac</code> module of YAC (Yes Another Checker) is a command-line tool for checking the validity of login credentials across multiple websites. It supports customizable website configurations and logging capabilities, making it an efficient solution for automated credential validation.</p>
+        
+        <h2>Features</h2>
+        <ul>
+            <li>Perform single or multiple login checks on specified websites.</li>
+            <li>Support for custom payloads and headers for each website.</li>
+            <li>Logging of results with timestamps, including successful and failed login attempts.</li>
+            <li>Save results to a CSV file.</li>
+            <li>Command-line interface with argparse for ease of use.</li>
+        </ul>
+        
+        <h2>Prerequisites</h2>
+        <ul>
+            <li>Python 3.6 or higher</li>
+            <li>Required Python packages:
+                <ul>
+                    <li><code>requests</code></li>
+                    <li><code>argparse</code></li>
+                    <li>Any other dependencies as specified in the <code>setup.py</code> file</li>
+                </ul>
+            </li>
+        </ul>
+        
+        <h2>Installation</h2>
+        <p>Clone the repository and install the package:</p>
+        <pre><code>git clone -b package https://github.com/hithmast/YAC.git
+cd YAC
+sudo python setup.py install # or pip install .
+</code></pre>
+        <p>Or</p>
+        <pre><code>pip install yachecker
+</code></pre>
+        <p>Ensure that you have the necessary configuration file located at <code>~/.yac/config/websites_config.ini</code>. The script will utilize this file to perform login checks.</p>
+        
+        <h2>Usage</h2>
+        <h3>Command-Line Interface</h3>
+        <p>The script can be run from the command line with various options:</p>
+        <pre><code>yac [options]
+</code></pre>
+        
+        <h3>Options</h3>
+        <ul>
+            <li><code>-c</code>, <code>--config</code>: Print a list of websites in the config file.</li>
+            <li><code>-s</code>, <code>--single</code>: Perform a single check on the specified website number.</li>
+            <li><code>-m</code>, <code>--multiple</code>: Perform multiple checks on specified website numbers (comma-separated).</li>
+            <li><code>-C</code>, <code>--combo</code>: Path to a credentials file for a single check.</li>
+            <li><code>-o</code>, <code>--output</code>: Specify the output file for the results of a single check.</li>
+        </ul>
+        
+        <h3>Examples</h3>
+        <h4>Print Configured Websites</h4>
+        <pre><code>yac -c
+</code></pre>
+        
+        <h4>Perform a Single Check</h4>
+        <pre><code>yac -s 1 -C credentials.csv -o output.csv
+</code></pre>
+        
+        <h4>Perform Multiple Checks</h4>
+        <pre><code>python main.py -m 1,2,3
+</code></pre>
+        
+        <h2>Logging</h2>
+        <p>The script generates a log file <code>output.log</code> in a <code>logs</code> directory, creating a subdirectory based on the current date. This log file contains detailed information about the execution, including successful and failed login attempts.</p>
+        
+        <h2>Saving Results</h2>
+        <p>Upon termination (either by completing the checks or by pressing <code>Ctrl+C</code>), the user will be prompted to save the results to a file named <code>results.csv</code>.</p>
+        
+        <h2>Configuration</h2>
+        <p>The website configurations should be defined in the <code>~/.yac/config/websites_config.ini</code> file. The configuration file should specify the login URLs, success and failure indicators, payloads, and headers for each website.</p>
+        
+        <h2>Contributing</h2>
+        <p>Contributions are welcome! Please fork the repository, make your changes, and submit a pull request. Ensure that your code follows the project’s coding standards and includes relevant tests.</p>
+        
+        <h2>License</h2>
+        <p>This project is licensed under the MIT License. See the <a href="LICENSE">LICENSE</a> file for details.</p>
+        
+        <h2>Author</h2>
+        <p><strong>Ali Emara</strong><br>
+        <a href="mailto:ali.emara175@gmail.com">ali.emara175@gmail.com</a><br>
+        <a href="https://github.com/hithmast">GitHub</a></p>
+    </div>
+</body>
+</html>
