@@ -1,4 +1,4 @@
-# YAC: Yes Another Checker - main.py
+# YAC: Yes Another Checker
 
 ## Overview
 
