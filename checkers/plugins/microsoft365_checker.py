@@ -101,8 +101,9 @@ class Microsoft365Checker(BaseChecker):
             async with self._session.post(url, data=payload, proxy=self.proxy) as response:
                 body = await response.json(content_type=None)
         except Exception as exc:
+            # Exception class name only, never str(exc) -- see http_checker.py.
             return LoginResult(
-                username, password, False, f"Exception: {exc}",
+                username, password, False, f"Exception: {type(exc).__name__}",
                 time.monotonic() - start, self.mode_name,
             )
 

@@ -147,8 +147,13 @@ async def run_site(
                 try:
                     result = await checker.attempt(username, password)
                 except Exception as exc:  # noqa: BLE001 - a single bad attempt must not kill the batch
-                    logger.exception("Unexpected error checking %s on %s", username, website_name)
-                    result = LoginResult(username, password, False, f"Unhandled exception: {exc}", mode=mode)
+                    # Log/report the exception class only, never str(exc) or a
+                    # traceback: some client-library exceptions echo request
+                    # details back in their message, which the submitted
+                    # password must never be able to leak through.
+                    exc_name = type(exc).__name__
+                    logger.error("Unexpected error checking %s on %s: %s", username, website_name, exc_name)
+                    result = LoginResult(username, password, False, f"Unhandled exception: {exc_name}", mode=mode)
 
                 lockout_guard.observe(username, result)
                 results.append(result)

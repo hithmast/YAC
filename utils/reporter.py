@@ -59,22 +59,14 @@ def write_json_summary(site_summaries: List[dict], output_file: str) -> None:
     logger.info("Summary report saved to %s", output_file)
 
 
-def _mask_password(password: str) -> str:
-    """Shape-preserving mask for terminal/CI-log display.
-
-    Console output (unlike the CSV/JSON results files) tends to end up in
-    places with much broader or longer-lived visibility -- CI job logs,
-    screen shares, terminal scrollback/history. The full plaintext password
-    is already recorded in the results files this summary points at, so the
-    console only needs to confirm *that* a credential is valid, not repeat
-    the secret itself.
-    """
-    if len(password) <= 2:
-        return "*" * len(password)
-    return password[0] + "*" * (len(password) - 2) + password[-1]
-
-
 def print_console_summary(site_summaries: List[dict]) -> None:
+    """Print a run summary without ever touching plaintext passwords.
+
+    Console/CI-log output has much broader and longer-lived visibility than
+    the results files (terminal scrollback, CI job logs, screen shares), so
+    it deliberately shows only usernames here -- the matching password for
+    each is in the per-site CSV / results/summary.json this summary points at.
+    """
     print("\n" + "=" * 60)
     print("YAC RUN SUMMARY")
     print("=" * 60)
@@ -86,5 +78,5 @@ def print_console_summary(site_summaries: List[dict]) -> None:
             f"time={summary['total_duration_seconds']}s"
         )
         for cred in summary["valid_credentials"]:
-            print(f"    -> VALID: {cred['username']} : {_mask_password(cred['password'])}")
+            print(f"    -> VALID username: {cred['username']} (password in the results file)")
     print("=" * 60 + "\n")

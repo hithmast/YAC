@@ -54,15 +54,9 @@ def test_write_json_summary_roundtrip(tmp_path):
     assert data["sites"][0]["website"] == "MySite"
 
 
-def test_mask_password_preserves_shape():
-    assert reporter._mask_password("correct-horse") == "c***********e"
-    assert reporter._mask_password("ab") == "**"
-    assert reporter._mask_password("") == ""
-
-
-def test_print_console_summary_never_prints_full_password(capsys):
+def test_print_console_summary_never_prints_password(capsys):
     summary = reporter.build_site_summary("MySite", "requests", sample_results())
     reporter.print_console_summary([summary])
     output = capsys.readouterr().out
     assert "pw1" not in output
-    assert "p*1" in output
+    assert "alice" in output

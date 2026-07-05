@@ -206,8 +206,9 @@ class BrowserChecker(BaseChecker):
                 time.monotonic() - start, self.mode_name, {"url": final_url},
             )
         except Exception as exc:
+            # Exception class name only, never str(exc) -- see http_checker.py.
             return LoginResult(
-                username, password, False, f"Exception: {exc}",
+                username, password, False, f"Exception: {type(exc).__name__}",
                 time.monotonic() - start, self.mode_name,
             )
         finally:

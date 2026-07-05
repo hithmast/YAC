@@ -191,6 +191,10 @@ class HttpChecker(BaseChecker):
                     continue
 
         return LoginResult(
-            username, password, False, f"Exception: {last_exc}",
+            # Exception class name only, never str(last_exc): some HTTP client
+            # exceptions echo request details (URL, headers) back in their
+            # message, which is a route the submitted credentials must never
+            # leak through into logs/results.
+            username, password, False, f"Exception: {type(last_exc).__name__}",
             time.monotonic() - start, self.mode_name,
         )
