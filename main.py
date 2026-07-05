@@ -166,10 +166,15 @@ async def run_site(
                         )
 
                 level = logging.INFO if result.success else logging.DEBUG
+                # Deliberately excludes `password`: operational logs are not
+                # the deliverable and often have broader/longer-lived access
+                # than the results files. The valid password is recorded in
+                # the per-site CSV and results/summary.json, which is where
+                # it belongs.
                 logger.log(
                     level,
-                    "[%s] %s : %s -> %s (%s)",
-                    website_name, username, password,
+                    "[%s] %s -> %s (%s)",
+                    website_name, username,
                     "SUCCESS" if result.success else "failed", result.reason,
                 )
 
