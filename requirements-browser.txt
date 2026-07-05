@@ -1,0 +1,6 @@
+# Optional dependencies for mode=browser (Playwright) and mode=smart (browser-use).
+# Install with: pip install -r requirements.txt -r requirements-browser.txt
+# Then, once: playwright install chromium
+-r requirements.txt
+playwright>=1.44
+browser-use>=0.2
