@@ -11,7 +11,7 @@ import configparser
 from configparser import ExtendedInterpolation
 from urllib.parse import quote
 
-REQUIRED_KEYS = ("login_url", "credentials_file", "output_file")
+REQUIRED_KEYS = ("login_url", "output_file")
 
 
 class ConfigValidationError(ValueError):
@@ -50,6 +50,23 @@ def read_website_config(config_file: str) -> dict:
         if missing:
             raise ConfigValidationError(
                 f"Section [{section}] is missing required key(s): {', '.join(missing)}"
+            )
+
+        strategy = (website.get("strategy") or "pairs").strip().lower()
+        if strategy == "spray":
+            if not website.get("username_list") or not website.get("password_list"):
+                raise ConfigValidationError(
+                    f"Section [{section}] uses strategy=spray and must set both "
+                    "'username_list' and 'password_list'"
+                )
+        elif strategy == "pairs":
+            if not website.get("credentials_file"):
+                raise ConfigValidationError(
+                    f"Section [{section}] is missing required key: credentials_file"
+                )
+        else:
+            raise ConfigValidationError(
+                f"Section [{section}] has unknown strategy '{strategy}' (expected: pairs, spray)"
             )
 
         websites[section] = {

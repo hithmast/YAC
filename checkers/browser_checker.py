@@ -17,6 +17,7 @@ import time
 from typing import Optional
 
 from .base import BaseChecker, LoginResult
+from utils.bot_protection import detect_bot_protection
 from utils.urlutil import reverse_url_encoding
 
 logger = logging.getLogger("yac")
@@ -54,6 +55,9 @@ class BrowserChecker(BaseChecker):
         ]
         self.failure_url_contains = [
             s.strip() for s in (self._get("failure_url_contains") or "").split(",") if s.strip()
+        ]
+        self.lockout_indicators = [
+            s.strip() for s in (self._get("lockout_indicators") or "").split(",") if s.strip()
         ]
         self.proxy = self._get("proxy") or None
         self.user_agent = self.headers.get("user-agent") or self.headers.get("User-Agent")
@@ -140,6 +144,22 @@ class BrowserChecker(BaseChecker):
 
             final_url = page.url
             content = await page.content()
+
+            marker = detect_bot_protection(content)
+            if marker:
+                return LoginResult(
+                    username, password, False,
+                    f"Blocked by bot/CAPTCHA protection ({marker})",
+                    time.monotonic() - start, self.mode_name, {"url": final_url, "blocked": True},
+                )
+
+            for indicator in self.lockout_indicators:
+                if indicator in content:
+                    return LoginResult(
+                        username, password, False, f"Account locked out ({indicator})",
+                        time.monotonic() - start, self.mode_name,
+                        {"url": final_url, "locked_out": True},
+                    )
 
             for indicator in self.success_url_contains:
                 if indicator in final_url:

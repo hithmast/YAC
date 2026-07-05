@@ -1,20 +1,23 @@
 """YAC (Yes Another Checker) -- multi-site smart login checker.
 
-Three interchangeable backends, selected per-website via `mode` in
+Interchangeable backends, selected per-website via `mode` in
 websites_config.ini:
 
   requests  - fast async HTTP POST checker for classic server-rendered forms
   browser   - real (Playwright) headless browser for JS-rendered forms
   smart     - browser-use AI agent for multi-step / highly dynamic modern SPAs
+  o365      - protocol-aware Microsoft 365 / Azure AD checker (AADSTS codes)
+  okta      - protocol-aware Okta checker (Authn API status codes)
 
-See README.md for the full config schema and an authorized-use disclaimer.
+Plus: lockout-aware pacing, password-spray strategy, bot/CAPTCHA detection,
+and resumable runs. See README.md for the full config schema and an
+authorized-use disclaimer.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import csv
 import logging
 import os
 import sys
@@ -22,8 +25,11 @@ from typing import Dict, List
 
 from checkers import get_checker_class
 from checkers.base import LoginResult
+from utils import credentials as credentials_lib
 from utils import parser as config_parser
 from utils import reporter
+from utils.checkpoint import CheckpointWriter, checkpoint_path, load_done
+from utils.lockout_guard import LockoutGuard
 from utils.logger import setup_logging
 from utils.rate_limiter import RateLimiter
 
@@ -40,11 +46,6 @@ DISCLAIMER = """
 """
 
 
-def load_credentials(credentials_file: str) -> List[Dict[str, str]]:
-    with open(credentials_file, "r", newline="") as f:
-        return list(csv.DictReader(f))
-
-
 def confirm_authorization(assume_yes: bool) -> bool:
     print(DISCLAIMER)
     if assume_yes:
@@ -53,38 +54,117 @@ def confirm_authorization(assume_yes: bool) -> bool:
     return answer.strip().lower() == "yes"
 
 
-async def run_site(website_name: str, website_info: dict, mode_override: str = None) -> List[LoginResult]:
+BLOCKED_ABORT_THRESHOLD = 3  # consecutive bot/CAPTCHA hits before giving up on a site
+
+
+async def run_site(
+    website_name: str,
+    website_info: dict,
+    mode_override: str = None,
+    resume: bool = False,
+    state_dir: str = ".yac_state",
+) -> List[LoginResult]:
     website = website_info["website"]
     mode = mode_override or website.get("mode", "requests")
     checker_cls = get_checker_class(mode)
 
-    credentials_file = website["credentials_file"]
     try:
-        credentials = load_credentials(credentials_file)
-    except FileNotFoundError:
-        logger.error("Credentials file '%s' not found for %s.", credentials_file, website_name)
+        credentials = credentials_lib.load_credentials(website)
+    except (FileNotFoundError, ValueError) as exc:
+        logger.error("Could not load credentials for %s: %s", website_name, exc)
         return []
 
+    ckpt_file = checkpoint_path(state_dir, website_name)
+    already_done = load_done(ckpt_file) if resume else set()
+    if already_done:
+        before = len(credentials)
+        credentials = [
+            row for row in credentials
+            if (row.get("Username", ""), row.get("Password", "")) not in already_done
+        ]
+        logger.info(
+            "Resume: skipping %d already-attempted pair(s) for %s.",
+            before - len(credentials), website_name,
+        )
+    checkpoint_writer = CheckpointWriter(ckpt_file) if resume else None
+
     rate_limiter = RateLimiter.from_website_info(website)
+    lockout_guard = LockoutGuard.from_website_info(website)
     results: List[LoginResult] = []
+    blocked_count = 0
+    abort_event = asyncio.Event()
 
     logger.info(
         "Starting %s check for '%s' (%d credential pairs, mode=%s, concurrency=%d)",
         mode, website_name, len(credentials), mode, rate_limiter.concurrency,
     )
 
-    async with checker_cls(website_name, website_info) as checker:
+    try:
+        checker = checker_cls(website_name, website_info)
+    except (ValueError, RuntimeError) as exc:
+        logger.error("Could not initialize %s checker for %s: %s", mode, website_name, exc)
+        if checkpoint_writer:
+            checkpoint_writer.close()
+        return []
+
+    try:
+        await checker.setup()
+    except (ValueError, RuntimeError) as exc:
+        logger.error("Could not start %s checker for %s: %s", mode, website_name, exc)
+        if checkpoint_writer:
+            checkpoint_writer.close()
+        return []
+
+    try:
 
         async def worker(row: Dict[str, str]) -> None:
+            nonlocal blocked_count
             username, password = row.get("Username", ""), row.get("Password", "")
+
+            if abort_event.is_set():
+                return
+            if lockout_guard.is_locked_out(username):
+                results.append(LoginResult(
+                    username, password, False,
+                    "Skipped (account appears locked out from a prior attempt)", mode=mode,
+                ))
+                return
+
+            await lockout_guard.wait_for_slot(username)
             async with rate_limiter.slot():
+                if abort_event.is_set():
+                    return
+                # Re-check: a sibling attempt for this same username may have
+                # completed (and tripped the lockout) while we were queued
+                # behind wait_for_slot()/the concurrency semaphore above.
+                if lockout_guard.is_locked_out(username):
+                    results.append(LoginResult(
+                        username, password, False,
+                        "Skipped (account appears locked out from a prior attempt)", mode=mode,
+                    ))
+                    return
                 await rate_limiter.throttle()
                 try:
                     result = await checker.attempt(username, password)
                 except Exception as exc:  # noqa: BLE001 - a single bad attempt must not kill the batch
                     logger.exception("Unexpected error checking %s on %s", username, website_name)
                     result = LoginResult(username, password, False, f"Unhandled exception: {exc}", mode=mode)
+
+                lockout_guard.observe(username, result)
                 results.append(result)
+                if checkpoint_writer:
+                    checkpoint_writer.record(username, password)
+
+                if result.extra.get("blocked"):
+                    blocked_count += 1
+                    if blocked_count >= BLOCKED_ABORT_THRESHOLD and not abort_event.is_set():
+                        abort_event.set()
+                        logger.warning(
+                            "Bot/CAPTCHA protection detected %d times on '%s'; "
+                            "aborting remaining attempts for this site.",
+                            blocked_count, website_name,
+                        )
+
                 level = logging.INFO if result.success else logging.DEBUG
                 logger.log(
                     level,
@@ -100,14 +180,24 @@ async def run_site(website_name: str, website_info: dict, mode_override: str = N
             for t in tasks:
                 t.cancel()
             raise
+    finally:
+        await checker.teardown()
+        if checkpoint_writer:
+            checkpoint_writer.close()
 
     return results
 
 
-async def run_all(selected: Dict[str, dict], mode_override: str, output_dir: str) -> None:
+async def run_all(
+    selected: Dict[str, dict],
+    mode_override: str,
+    output_dir: str,
+    resume: bool = False,
+    state_dir: str = ".yac_state",
+) -> None:
     site_summaries = []
     for website_name, website_info in selected.items():
-        results = await run_site(website_name, website_info, mode_override)
+        results = await run_site(website_name, website_info, mode_override, resume, state_dir)
         if not results:
             continue
         output_file = website_info["website"].get("output_file") or os.path.join(
@@ -166,12 +256,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--config-file", default="config/websites_config.ini", help="Path to the websites config INI file."
     )
     p.add_argument(
-        "--mode", choices=["requests", "browser", "smart"],
+        "--mode", choices=["requests", "browser", "smart", "o365", "okta"],
         help="Override the mode= setting from config for every selected site.",
     )
     p.add_argument("--output-dir", default="results", help="Directory for the aggregate JSON summary.")
     p.add_argument("--yes", action="store_true", help="Skip the interactive authorization confirmation prompt.")
     p.add_argument("--validate-config", action="store_true", help="Parse and validate the config, then exit.")
+    p.add_argument(
+        "--resume", action="store_true",
+        help="Skip credential pairs already attempted in a prior run and record new ones as they complete.",
+    )
+    p.add_argument(
+        "--state-dir", default=".yac_state", help="Directory used to store --resume checkpoint files."
+    )
     p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging.")
     return p
 
@@ -205,7 +302,7 @@ def main() -> None:
     os.makedirs(args.output_dir, exist_ok=True)
 
     try:
-        asyncio.run(run_all(selected, args.mode, args.output_dir))
+        asyncio.run(run_all(selected, args.mode, args.output_dir, args.resume, args.state_dir))
     except KeyboardInterrupt:
         logger.info("Interrupted by user. Partial results (if any) were already written per completed site.")
 

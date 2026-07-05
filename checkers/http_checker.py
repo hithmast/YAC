@@ -16,6 +16,7 @@ import time
 from typing import Optional
 
 from .base import BaseChecker, LoginResult
+from utils.bot_protection import detect_bot_protection
 from utils.urlutil import reverse_url_encoding
 
 try:
@@ -112,6 +113,9 @@ class HttpChecker(BaseChecker):
         start = time.monotonic()
         success_indicators = self.website.get("success_indicators", [])
         failure_indicators = self.website.get("failure_indicators", [])
+        lockout_indicators = [
+            i.strip() for i in (self._get("lockout_indicators") or "").split(",") if i.strip()
+        ]
 
         last_exc: Optional[Exception] = None
         for retry in range(self.max_retries + 1):
@@ -119,6 +123,24 @@ class HttpChecker(BaseChecker):
                 async with await self._post_once(username, password) as response:
                     body = await response.text()
                     final_url = str(response.url)
+
+                    marker = detect_bot_protection(body)
+                    if marker:
+                        return LoginResult(
+                            username, password, False,
+                            f"Blocked by bot/CAPTCHA protection ({marker})",
+                            time.monotonic() - start, self.mode_name,
+                            {"status": response.status, "url": final_url, "blocked": True},
+                        )
+
+                    for indicator in lockout_indicators:
+                        if indicator in body:
+                            return LoginResult(
+                                username, password, False,
+                                f"Account locked out ({indicator})",
+                                time.monotonic() - start, self.mode_name,
+                                {"status": response.status, "url": final_url, "locked_out": True},
+                            )
 
                     for indicator in self.success_url_contains:
                         if indicator in final_url:

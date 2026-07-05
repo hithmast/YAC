@@ -140,9 +140,15 @@ class SmartChecker(BaseChecker):
                     time.monotonic() - start, self.mode_name,
                 )
             success, reason = parsed
+            reason_lower = reason.lower()
+            extra = {}
+            if any(term in reason_lower for term in ("captcha", "bot detection", "bot check", "blocked")):
+                extra["blocked"] = True
+            if not success and "locked" in reason_lower:
+                extra["locked_out"] = True
             return LoginResult(
                 username, password, success, reason,
-                time.monotonic() - start, self.mode_name,
+                time.monotonic() - start, self.mode_name, extra,
             )
         except Exception as exc:
             return LoginResult(
