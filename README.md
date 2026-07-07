@@ -78,6 +78,42 @@ On top of that, every backend shares:
 - **Tested**: pytest suite (57+ tests) covering every module, run in CI on
   Python 3.9/3.11/3.12.
 
+## How YAC compares
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/comparison-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/comparison-light.svg">
+  <img alt="Feature comparison: YAC vs. Hydra, Medusa, CredMaster, TREVORspray, and MSOLSpray" src="docs/comparison-light.svg">
+</picture>
+
+Table view (same data, for screen readers / non-image contexts): ✓ supported,
+◐ partial or basic support, – not supported. Based on each project's public
+documentation -- verify current capabilities directly before relying on this.
+
+| Feature | YAC | Hydra | Medusa | CredMaster | TREVORspray | MSOLSpray |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Multi-target config (one run, many sites) | ✓ | ◐ | ◐ | ◐ | ◐ | – |
+| Generic HTTP form login (CSRF-aware) | ✓ | ◐ | ◐ | – | – | – |
+| Real-browser login for JS/SPA forms | ✓ | – | – | – | – | – |
+| AI-agent (LLM) driven login | ✓ | – | – | – | – | – |
+| Microsoft 365 / Azure AD (AADSTS-aware) | ✓ | – | – | ✓ | ✓ | ✓ |
+| Okta (Authn API-aware) | ✓ | – | – | ✓ | – | – |
+| Lockout-aware pacing (per-account) | ✓ | – | – | ◐ | ✓ | – |
+| Password-spray ordering (wide-before-deep) | ✓ | ◐ | ◐ | ✓ | ✓ | ✓ |
+| Bot/CAPTCHA detection + auto-abort | ✓ | – | – | – | – | – |
+| Resume after interruption | ✓ | ✓ | – | – | – | – |
+
+YAC's niche isn't out-speeding purpose-built C tools like Hydra/Medusa at raw
+protocol brute-forcing, or out-evading a rotating-IP spray tool like
+CredMaster -- it's being the one config-driven tool that spans classic HTTP
+forms, JS-heavy SPAs (via a real browser or an AI agent), and protocol-aware
+enterprise IdPs (Microsoft 365, Okta) in a single run, with lockout-safety and
+bot-detection built in everywhere rather than per-tool.
+
+The chart regenerates from `docs/gen_comparison_chart.py`; edit the data table
+at the top of that script and re-run it (`python3 docs/gen_comparison_chart.py docs`)
+to update both SVGs.
+
 ## Requirements
 
 - Python 3.9+
